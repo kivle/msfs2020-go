@@ -1,6 +1,7 @@
 package websockets
 
 import (
+	"net/http"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -29,8 +30,13 @@ var (
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin: CustomCheckOrigin,
 	}
 )
+
+func CustomCheckOrigin(r *http.Request) bool {
+	return true;
+}
 
 type ReceiveMessage struct {
 	Message    []byte
