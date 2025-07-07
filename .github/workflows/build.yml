@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+      - name: Install go-bindata
+        run: go install github.com/go-bindata/go-bindata/v3/...@latest
+        shell: bash
+      - name: Download MSFS SDK
+        shell: pwsh
+        run: |
+          $json = Invoke-RestMethod 'https://sdk.flightsimulator.com/files/sdk.json'
+          $latest = ($json.sdks | Sort-Object -Property version)[-1]
+          Invoke-WebRequest $latest.downloadLink -OutFile sdk.zip
+          Expand-Archive sdk.zip -DestinationPath '_vendor'
+      - name: Generate assets
+        run: go generate ./...
+        shell: bash
+      - name: Format
+        run: gofmt -w $(git ls-files '*.go')
+        shell: bash
+      - name: Vet
+        run: env GOOS=windows go vet ./...
+        shell: bash
+      - name: Test
+        run: env GOOS=windows go test ./...
+        shell: bash
+      - name: Build example
+        run: env GOOS=windows go build ./examples/request_data
+        shell: bash

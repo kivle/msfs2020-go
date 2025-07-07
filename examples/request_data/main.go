@@ -30,6 +30,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer s.Close()
 	fmt.Println("Connected to Flight Simulator!")
 
 	report := &Report{}
@@ -94,11 +95,5 @@ func main() {
 		}
 
 		time.Sleep(500 * time.Millisecond)
-	}
-
-	fmt.Println("close")
-
-	if err = s.Close(); err != nil {
-		panic(err)
 	}
 }
