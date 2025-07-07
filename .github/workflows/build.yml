@@ -22,7 +22,13 @@ jobs:
         run: |
           $json = Invoke-RestMethod 'https://sdk.flightsimulator.com/files/sdk.json' -Headers @{ 'User-Agent' = 'curl' }
           $sdks = $json.sdks
-          if (-not $sdks) { throw 'SDK list not found in sdk.json' }
+          if (-not $sdks) { $sdks = $json.SDKs }
+          if (-not $sdks) { $sdks = $json.packages }
+          if (-not $sdks) {
+            $props = ($json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ', '
+            Write-Host "Unexpected json properties: $props"
+            throw 'SDK list not found in sdk.json'
+          }
           $latest = $sdks | Sort-Object -Property version | Select-Object -Last 1
           $url = $latest.downloadLink
           if (-not $url) { throw 'downloadLink not found for latest SDK' }
