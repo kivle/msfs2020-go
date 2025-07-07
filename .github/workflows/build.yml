@@ -21,8 +21,12 @@ jobs:
         shell: pwsh
         run: |
           $json = Invoke-RestMethod 'https://sdk.flightsimulator.com/files/sdk.json' -Headers @{ 'User-Agent' = 'curl' }
-          $latest = $json.sdks | Sort-Object -Property version | Select-Object -Last 1
-          Invoke-WebRequest $latest.downloadLink -OutFile sdk.zip -Headers @{ 'User-Agent' = 'curl' }
+          $sdks = $json.sdks
+          if (-not $sdks) { throw 'SDK list not found in sdk.json' }
+          $latest = $sdks | Sort-Object -Property version | Select-Object -Last 1
+          $url = $latest.downloadLink
+          if (-not $url) { throw 'downloadLink not found for latest SDK' }
+          Invoke-WebRequest $url -OutFile sdk.zip -Headers @{ 'User-Agent' = 'curl' }
           New-Item -ItemType Directory -Force -Path '_vendor' | Out-Null
           Expand-Archive sdk.zip -DestinationPath '_vendor' -Force
       - name: Generate assets
