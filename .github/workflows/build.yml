@@ -20,10 +20,11 @@ jobs:
       - name: Download MSFS SDK
         shell: pwsh
         run: |
-          $json = Invoke-RestMethod 'https://sdk.flightsimulator.com/files/sdk.json'
-          $latest = ($json.sdks | Sort-Object -Property version)[-1]
-          Invoke-WebRequest $latest.downloadLink -OutFile sdk.zip
-          Expand-Archive sdk.zip -DestinationPath '_vendor'
+          $json = Invoke-RestMethod 'https://sdk.flightsimulator.com/files/sdk.json' -Headers @{ 'User-Agent' = 'curl' }
+          $latest = $json.sdks | Sort-Object -Property version | Select-Object -Last 1
+          Invoke-WebRequest $latest.downloadLink -OutFile sdk.zip -Headers @{ 'User-Agent' = 'curl' }
+          New-Item -ItemType Directory -Force -Path '_vendor' | Out-Null
+          Expand-Archive sdk.zip -DestinationPath '_vendor' -Force
       - name: Generate assets
         run: go generate ./...
         shell: bash
