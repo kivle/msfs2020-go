@@ -17,7 +17,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -337,16 +336,16 @@ type bintree struct {
 	Children map[string]*bintree
 }
 var _bintree = &bintree{nil, map[string]*bintree{
-	"images": &bintree{nil, map[string]*bintree{
-		"layers-2x.png": &bintree{imagesLayers2xPng, map[string]*bintree{}},
-		"layers.png": &bintree{imagesLayersPng, map[string]*bintree{}},
-		"marker-icon-2x.png": &bintree{imagesMarkerIcon2xPng, map[string]*bintree{}},
-		"marker-icon.png": &bintree{imagesMarkerIconPng, map[string]*bintree{}},
-		"marker-shadow.png": &bintree{imagesMarkerShadowPng, map[string]*bintree{}},
+	"images": {nil, map[string]*bintree{
+		"layers-2x.png": {imagesLayers2xPng, map[string]*bintree{}},
+		"layers.png": {imagesLayersPng, map[string]*bintree{}},
+		"marker-icon-2x.png": {imagesMarkerIcon2xPng, map[string]*bintree{}},
+		"marker-icon.png": {imagesMarkerIconPng, map[string]*bintree{}},
+		"marker-shadow.png": {imagesMarkerShadowPng, map[string]*bintree{}},
 	}},
-	"leaflet.css": &bintree{leafletCss, map[string]*bintree{}},
-	"leaflet.js": &bintree{leafletJs, map[string]*bintree{}},
-	"leaflet.rotatedMarker.js": &bintree{leafletRotatedmarkerJs, map[string]*bintree{}},
+	"leaflet.css": {leafletCss, map[string]*bintree{}},
+	"leaflet.js": {leafletJs, map[string]*bintree{}},
+	"leaflet.rotatedMarker.js": {leafletRotatedmarkerJs, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory
@@ -363,7 +362,7 @@ func RestoreAsset(dir, name string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(_filePath(dir, name), data, info.Mode())
+	err = os.WriteFile(_filePath(dir, name), data, info.Mode())
 	if err != nil {
 		return err
 	}

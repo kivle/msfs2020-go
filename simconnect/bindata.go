@@ -8,7 +8,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -193,10 +192,10 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"MSFS-SDK": &bintree{nil, map[string]*bintree{
-		"SimConnect SDK": &bintree{nil, map[string]*bintree{
-			"lib": &bintree{nil, map[string]*bintree{
-				"SimConnect.dll": &bintree{msfsSdkSimconnectSdkLibSimconnectDll, map[string]*bintree{}},
+	"MSFS-SDK": {nil, map[string]*bintree{
+		"SimConnect SDK": {nil, map[string]*bintree{
+			"lib": {nil, map[string]*bintree{
+				"SimConnect.dll": {msfsSdkSimconnectSdkLibSimconnectDll, map[string]*bintree{}},
 			}},
 		}},
 	}},
@@ -216,7 +215,7 @@ func RestoreAsset(dir, name string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(_filePath(dir, name), data, info.Mode())
+	err = os.WriteFile(_filePath(dir, name), data, info.Mode())
 	if err != nil {
 		return err
 	}
