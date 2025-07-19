@@ -7,7 +7,6 @@ package simconnect
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -55,7 +54,7 @@ func New(name string) (*SimConnect, error) {
 		if _, err = os.Stat(dllPath); os.IsNotExist(err) {
 			buf := MustAsset("MSFS-SDK/SimConnect SDK/lib/SimConnect.dll")
 
-			if err := ioutil.WriteFile(dllPath, buf, 0644); err != nil {
+			if err := os.WriteFile(dllPath, buf, 0644); err != nil {
 				return nil, err
 			}
 		}
@@ -92,9 +91,14 @@ func New(name string) (*SimConnect, error) {
 	//   HANDLE hEventHandle,
 	//   DWORD ConfigIndex
 	// );
+
+	var ptr, err = syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, err
+	}
 	args := []uintptr{
 		uintptr(unsafe.Pointer(&s.handle)),
-		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(name))),
+		uintptr(unsafe.Pointer(ptr)),
 		0,
 		0,
 		0,
@@ -165,7 +169,6 @@ func (s *SimConnect) Close() error {
 	r1, _, err := proc_SimConnect_Close.Call(uintptr(s.handle))
 	if int32(r1) < 0 {
 		return fmt.Errorf("SimConnect_Close error: %d %s", int32(r1), err)
-		panic("failed")
 	}
 	return nil
 }
