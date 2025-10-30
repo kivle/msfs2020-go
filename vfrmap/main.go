@@ -103,6 +103,7 @@ func main() {
 	flag.Parse()
 
 	fmt.Printf("\nmsfs2020-go/vfrmap\n  readme: https://github.com/lian/msfs2020-go/blob/master/vfrmap/README.md\n  issues: https://github.com/lian/msfs2020-go/issues\n  version: %s (%s)\n\n", buildVersion, buildTime)
+	fmt.Print("https://kivle.github.io/msfs-map\n")
 
 	exitSignal := make(chan os.Signal, 1)
 	signal.Notify(exitSignal, os.Interrupt, syscall.SIGTERM)
