@@ -106,41 +106,14 @@ func main() {
 
 	exitSignal := make(chan os.Signal, 1)
 	signal.Notify(exitSignal, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-exitSignal
+		fmt.Print("\n\nExiting...\n")
+		os.Exit(0)
+	}()
 	exePath, _ := os.Executable()
 
 	ws := websockets.New()
-
-	s, err := simconnect.New("msfs2020-go/vfrmap")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("connected to flight simulator!")
-
-	report := &Report{}
-	err = s.RegisterDataDefinition(report)
-	if err != nil {
-		panic(err)
-	}
-
-	trafficReport := &TrafficReport{}
-	err = s.RegisterDataDefinition(trafficReport)
-	if err != nil {
-		panic(err)
-	}
-
-	teleportReport := &TeleportRequest{}
-	err = s.RegisterDataDefinition(teleportReport)
-	if err != nil {
-		panic(err)
-	}
-
-	eventSimStartID := s.GetEventID()
-	//s.SubscribeToSystemEvent(eventSimStartID, "SimStart")
-	//s.SubscribeToFacilities(simconnect.FACILITY_LIST_TYPE_AIRPORT, s.GetDefineID(&simconnect.DataFacilityAirport{}))
-	//s.SubscribeToFacilities(simconnect.FACILITY_LIST_TYPE_WAYPOINT, s.GetDefineID(&simconnect.DataFacilityWaypoint{}))
-
-	startupTextEventID := s.GetEventID()
-	s.ShowText(simconnect.TEXT_TYPE_PRINT_WHITE, 15, startupTextEventID, "msfs2020-go/vfrmap connected")
 
 	go func() {
 		app := func(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +125,8 @@ func main() {
 
 			filePath := filepath.Join(filepath.Dir(exePath), "index.html")
 
-			if _, err = os.Stat(filePath); os.IsNotExist(err) {
+			var _, err = os.Stat(filePath)
+			if os.IsNotExist(err) {
 				w.Write(MustAsset(filepath.Base(filePath)))
 			} else {
 				fmt.Println("use local", filePath)
@@ -170,6 +144,49 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	for {
+		mainLoop(exitSignal, ws)
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
+	s, err := simconnect.New("msfs2020-go/vfrmap")
+	if err != nil {
+		fmt.Printf("\nFailed to create simconnect connection: %s", err)
+		return
+	}
+	fmt.Println("connected to flight simulator!")
+
+	report := &Report{}
+	err = s.RegisterDataDefinition(report)
+	if err != nil {
+		fmt.Printf("\nFailed to register data definition for Report: %s", err)
+		return
+	}
+
+	trafficReport := &TrafficReport{}
+	err = s.RegisterDataDefinition(trafficReport)
+	if err != nil {
+		fmt.Printf("\nFailed to register data definition for TrafficReport: %s", err)
+		return
+	}
+
+	teleportReport := &TeleportRequest{}
+	err = s.RegisterDataDefinition(teleportReport)
+	if err != nil {
+		fmt.Printf("\nFailed to register data definition for TeleportRequest: %s", err)
+		return
+	}
+
+	eventSimStartID := s.GetEventID()
+	//s.SubscribeToSystemEvent(eventSimStartID, "SimStart")
+	//s.SubscribeToFacilities(simconnect.FACILITY_LIST_TYPE_AIRPORT, s.GetDefineID(&simconnect.DataFacilityAirport{}))
+	//s.SubscribeToFacilities(simconnect.FACILITY_LIST_TYPE_WAYPOINT, s.GetDefineID(&simconnect.DataFacilityWaypoint{}))
+
+	startupTextEventID := s.GetEventID()
+	s.ShowText(simconnect.TEXT_TYPE_PRINT_WHITE, 15, startupTextEventID, "msfs2020-go/vfrmap connected")
 
 	simconnectTick := time.NewTicker(100 * time.Millisecond)
 	planePositionTick := time.NewTicker(200 * time.Millisecond)
@@ -280,7 +297,7 @@ func main() {
 			}
 			os.Exit(0)
 
-		case _ = <-ws.NewConnection:
+		case <-ws.NewConnection:
 			// drain and skip
 
 		case m := <-ws.ReceiveMessages:
