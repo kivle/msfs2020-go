@@ -1,7 +1,5 @@
 package main
 
-//go:generate go-bindata -pkg main -o bindata.go -modtime 1 -prefix html html
-
 // build: GOOS=windows GOARCH=amd64 go build -o vfrmap.exe github.com/lian/msfs2020-go/vfrmap
 
 import (
@@ -11,13 +9,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/lian/msfs2020-go/simconnect"
-	"github.com/lian/msfs2020-go/vfrmap/html/leafletjs"
 	"github.com/lian/msfs2020-go/vfrmap/websockets"
 )
 
@@ -112,7 +108,6 @@ func main() {
 		fmt.Print("\n\nExiting...\n")
 		os.Exit(0)
 	}()
-	exePath, _ := os.Executable()
 
 	ws := websockets.New()
 
@@ -122,23 +117,16 @@ func main() {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")
-			w.Header().Set("Content-Type", "text/html")
+			w.Header().Set("Content-Type", "application/json")
 
-			filePath := filepath.Join(filepath.Dir(exePath), "index.html")
-
-			var _, err = os.Stat(filePath)
-			if os.IsNotExist(err) {
-				w.Write(MustAsset(filepath.Base(filePath)))
-			} else {
-				fmt.Println("use local", filePath)
-				http.ServeFile(w, r, filePath)
-			}
+			fmt.Fprintf(
+				w,
+				`{"status":"ok","message":"no embedded map UI; connect over websockets","ws_path":"/ws"}`,
+			)
 		}
 
 		http.HandleFunc("/ws", ws.Serve)
-		http.Handle("/leafletjs/", http.StripPrefix("/leafletjs/", leafletjs.FS{}))
 		http.HandleFunc("/", app)
-		//http.Handle("/", http.FileServer(http.Dir(".")))
 
 		err := http.ListenAndServe(httpListen, nil)
 		if err != nil {
