@@ -25,6 +25,9 @@ type Report struct {
 	Latitude      float64   `name:"PLANE LATITUDE" unit:"degrees"`
 	Longitude     float64   `name:"PLANE LONGITUDE" unit:"degrees"`
 	Heading       float64   `name:"PLANE HEADING DEGREES TRUE" unit:"degrees"`
+	GroundCourse  float64   `name:"GPS GROUND TRUE TRACK" unit:"degrees"`
+	GroundHeading float64   `name:"GPS GROUND TRUE HEADING" unit:"degrees"`
+	GroundSpeed   float64   `name:"GPS GROUND SPEED" unit:"knot"`
 	Airspeed      float64   `name:"AIRSPEED INDICATED" unit:"knot"`
 	AirspeedTrue  float64   `name:"AIRSPEED TRUE" unit:"knot"`
 	VerticalSpeed float64   `name:"VERTICAL SPEED" unit:"ft/min"`
@@ -292,6 +295,9 @@ func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 							"longitude":      report.Longitude,
 							"altitude":       fmt.Sprintf("%.0f", report.Altitude),
 							"heading":        int(report.Heading),
+							"ground_course":  int(report.GroundCourse),
+							"ground_heading": int(report.GroundHeading),
+							"ground_speed":   fmt.Sprintf("%.0f", report.GroundSpeed),
 							"airspeed":       fmt.Sprintf("%.0f", report.Airspeed),
 							"airspeed_true":  fmt.Sprintf("%.0f", report.AirspeedTrue),
 							"vertical_speed": fmt.Sprintf("%.0f", report.VerticalSpeed),
