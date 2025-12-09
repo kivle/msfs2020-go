@@ -1,10 +1,12 @@
 package websockets
 
 import (
-	"net/http"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,17 +27,58 @@ const (
 )
 
 var (
-	newline  = []byte{'\n'}
-	space    = []byte{' '}
-	upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin: CustomCheckOrigin,
-	}
+	newline = []byte{'\n'}
+	space   = []byte{' '}
 )
 
-func CustomCheckOrigin(r *http.Request) bool {
-	return true;
+func NewUpgrader(allowAllOrigins bool) websocket.Upgrader {
+	return websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			if allowAllOrigins {
+				return true
+			}
+			origin := r.Header.Get("Origin")
+			if origin == "" {
+				return false
+			}
+			if isAllowedLocalOrigin(origin) {
+				return true
+			}
+			if strings.EqualFold(origin, "https://github.com/kivle/msfs-map") {
+				return true
+			}
+			return false
+		},
+	}
+}
+
+func isAllowedLocalOrigin(origin string) bool {
+	// Accept http(s)://localhost or loopback IPs
+	if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "https://localhost") {
+		return true
+	}
+	if strings.HasPrefix(origin, "http://127.0.0.1") || strings.HasPrefix(origin, "https://127.0.0.1") {
+		return true
+	}
+	// basic check for other loopback IPs (IPv4/IPv6)
+	if strings.HasPrefix(origin, "http://[::1]") || strings.HasPrefix(origin, "https://[::1]") {
+		return true
+	}
+	// Allow http/https origins with RFC1918 IPs
+	if strings.HasPrefix(origin, "http://") || strings.HasPrefix(origin, "https://") {
+		host := strings.TrimPrefix(origin, "http://")
+		host = strings.TrimPrefix(host, "https://")
+		hostPort := strings.SplitN(host, "/", 2)[0]
+		hostOnly := strings.Split(hostPort, ":")[0]
+		if ip := net.ParseIP(hostOnly); ip != nil {
+			if ip.IsLoopback() || ip.IsPrivate() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type ReceiveMessage struct {

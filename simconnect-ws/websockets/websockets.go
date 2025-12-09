@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 type Websocket struct {
@@ -12,12 +14,12 @@ type Websocket struct {
 	broadcast       chan []byte
 	register        chan *Connection
 	unregister      chan *Connection
-	receive         chan []byte
 	ReceiveMessages chan ReceiveMessage
 	NewConnection   chan ReceiveMessage
+	upgrader        websocket.Upgrader
 }
 
-func New() *Websocket {
+func New(allowAllOrigins bool) *Websocket {
 	ws := &Websocket{
 		broadcast:       make(chan []byte, 256),
 		register:        make(chan *Connection),
@@ -25,6 +27,7 @@ func New() *Websocket {
 		connections:     make(map[*Connection]bool),
 		ReceiveMessages: make(chan ReceiveMessage, 256),
 		NewConnection:   make(chan ReceiveMessage, 256),
+		upgrader:        NewUpgrader(allowAllOrigins),
 	}
 	go ws.Run()
 
@@ -36,7 +39,7 @@ func (s *Websocket) ConnectionCount() int {
 }
 
 func (s *Websocket) Serve(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return

@@ -93,11 +93,13 @@ var disableTeleport bool
 var verbose bool
 var httpListen string
 var httpsListen string
+var allowAllOrigins bool
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "verbose output")
 	flag.StringVar(&httpListen, "listen-http", "0.0.0.0:9000", "http listen address (plain HTTP)")
 	flag.StringVar(&httpsListen, "listen-https", "0.0.0.0:9443", "https listen address (TLS)")
+	flag.BoolVar(&allowAllOrigins, "allow-all-origins", false, "allow all websocket origins (not recommended)")
 	flag.BoolVar(&disableTeleport, "disable-teleport", false, "disable teleport")
 	flag.Parse()
 
@@ -119,7 +121,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	ws := websockets.New()
+	ws := websockets.New(allowAllOrigins)
 
 	tlsAssets, err := ensureTLSAssets(httpsListen)
 	if err != nil {
