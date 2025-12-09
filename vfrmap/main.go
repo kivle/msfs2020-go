@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -91,15 +92,22 @@ var disableTeleport bool
 
 var verbose bool
 var httpListen string
+var httpsListen string
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "verbose output")
-	flag.StringVar(&httpListen, "listen", "0.0.0.0:9000", "http listen")
+	flag.StringVar(&httpListen, "listen-http", "0.0.0.0:9000", "http listen address (plain HTTP)")
+	flag.StringVar(&httpsListen, "listen-https", "0.0.0.0:9443", "https listen address (TLS)")
 	flag.BoolVar(&disableTeleport, "disable-teleport", false, "disable teleport")
 	flag.Parse()
 
-	fmt.Printf("\nmsfs2020-go/vfrmap\n  readme: https://github.com/lian/msfs2020-go/blob/master/vfrmap/README.md\n  issues: https://github.com/lian/msfs2020-go/issues\n  version: %s (%s)\n\n", buildVersion, buildTime)
-	fmt.Print("https://kivle.github.io/msfs-map\n")
+	fmt.Printf("\nmsfs2020-go/vfrmap\n")
+	fmt.Printf("readme: https://github.com/kivle/msfs2020-go/blob/master/vfrmap/README.md\n")
+	fmt.Printf("issues: https://github.com/kivle/msfs2020-go/issues\n  version: %s (%s)\n\n", buildVersion, buildTime)
+
+	fmt.Printf("For instructions on how to set up wss:// (TLS), go to http://localhost:9000\n\n")
+
+	fmt.Print("Map application: https://kivle.github.io/msfs-map\n\n")
 
 	exitSignal := make(chan os.Signal, 1)
 	signal.Notify(exitSignal, os.Interrupt, syscall.SIGTERM)
@@ -111,25 +119,33 @@ func main() {
 
 	ws := websockets.New()
 
+	tlsAssets, err := ensureTLSAssets(httpsListen)
+	if err != nil {
+		panic(fmt.Errorf("prepare TLS assets: %w", err))
+	}
+	fmt.Printf("TLS enabled; certificate: %s\n", tlsAssets.CertPath)
+
 	go func() {
-		app := func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-			w.Header().Set("Pragma", "no-cache")
-			w.Header().Set("Expires", "0")
-			w.Header().Set("Content-Type", "application/json")
+		mux := http.NewServeMux()
 
-			fmt.Fprintf(
-				w,
-				`{"status":"ok","message":"no embedded map UI; connect over websockets","ws_path":"/ws"}`,
-			)
-		}
+		mux.HandleFunc("/ws", ws.Serve)
+		mux.HandleFunc("/cert.pem", certificateDownloadHandler(tlsAssets, "pem"))
+		mux.HandleFunc("/cert.der", certificateDownloadHandler(tlsAssets, "der"))
+		mux.HandleFunc("/status", statusHandler(httpListen, httpsListen))
+		mux.HandleFunc("/", certificateInfoHandler(tlsAssets, httpListen, httpsListen))
 
-		http.HandleFunc("/ws", ws.Serve)
-		http.HandleFunc("/", app)
+		httpServer := &http.Server{Addr: httpListen, Handler: mux}
+		httpsServer := &http.Server{Addr: httpsListen, Handler: mux}
 
-		err := http.ListenAndServe(httpListen, nil)
-		if err != nil {
+		go func() {
+			fmt.Printf("HTTP listening on %s\n", httpListen)
+			if err := httpServer.ListenAndServe(); err != nil {
+				panic(err)
+			}
+		}()
+
+		fmt.Printf("HTTPS listening on %s\n", httpsListen)
+		if err := httpsServer.ListenAndServeTLS(tlsAssets.CertPath, tlsAssets.KeyPath); err != nil {
 			panic(err)
 		}
 	}()
@@ -143,10 +159,13 @@ func main() {
 func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 	s, err := simconnect.New("msfs2020-go/vfrmap")
 	if err != nil {
-		fmt.Printf("\nFailed to create simconnect connection: %s", err)
+		if !isIgnorableSimConnectError(err) {
+			fmt.Printf("\nFailed to create simconnect connection: %s", err)
+		}
 		return
 	}
 	fmt.Println("connected to flight simulator!")
+	defer s.Close()
 
 	report := &Report{}
 	err = s.RegisterDataDefinition(report)
@@ -194,13 +213,18 @@ func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 
 		case <-simconnectTick.C:
 			ppData, r1, err := s.GetNextDispatch()
+			if err != nil {
+				fmt.Printf("simconnect dispatch error: %s (retrying)\n", err)
+				return
+			}
 
 			if r1 < 0 {
 				if uint32(r1) == simconnect.E_FAIL {
 					// skip error, means no new messages?
 					continue
 				} else {
-					panic(fmt.Errorf("GetNextDispatch error: %d %s", r1, err))
+					fmt.Printf("GetNextDispatch error: %d %s (retrying)\n", r1, err)
+					return
 				}
 			}
 
@@ -281,9 +305,6 @@ func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 
 		case <-exitSignal:
 			fmt.Println("exiting..")
-			if err = s.Close(); err != nil {
-				panic(err)
-			}
 			os.Exit(0)
 
 		case <-ws.NewConnection:
@@ -334,4 +355,13 @@ func handleClientMessage(m websockets.ReceiveMessage, s *simconnect.SimConnect) 
 			r.SetData(s)
 		}
 	}
+}
+
+func isIgnorableSimConnectError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "SimConnect_Open error: -2147467259") &&
+		strings.Contains(msg, "The operation completed successfully")
 }
