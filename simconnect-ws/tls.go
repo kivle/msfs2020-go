@@ -87,9 +87,10 @@ func generateSelfSigned(certPath, keyPath, listenAddr string) (*TLSAssets, error
 		},
 		NotBefore:             time.Now().Add(-1 * time.Hour),
 		NotAfter:              time.Now().AddDate(5, 0, 0),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
+		IsCA:                  true, // allow trust toggles on iOS/macOS
 		DNSNames:              dnsNames,
 		IPAddresses:           ipAddrs,
 	}
