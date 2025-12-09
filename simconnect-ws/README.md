@@ -1,14 +1,14 @@
-# msfs2020-go/vfrmap
+# simconnect-ws
 
 lightweight data server using msfs2020-go/simconnect that streams simulator state over websockets. a minimal http endpoint is exposed for health/info; bring your own client ui.
 
 ## install
 
-* download latest release zip [here](https://github.com/lian/msfs2020-go/releases)
-* unzip `vfrmap-win64.zip`
+* download latest release zip [here](https://github.com/kivle/msfs2020-go/releases)
+* unzip `simconnect-ws-win64.zip`
 
 ## run
-* run `vfrmap.exe`
+* run `simconnect-ws.exe`
 * connect your websocket client to `ws://localhost:9000/ws`
 
 ## arguments
@@ -19,7 +19,7 @@ lightweight data server using msfs2020-go/simconnect that streams simulator stat
 
 ## compile
 
-`GOOS=windows GOARCH=amd64 go build github.com/lian/msfs2020-go/vfrmap` or see [build-vfrmap.sh](https://github.com/lian/msfs2020-go/blob/master/build-vfrmap.sh)
+`GOOS=windows GOARCH=amd64 go build github.com/kivle/msfs2020-go/simconnect-ws` or see [build-simconnect-ws.sh](https://github.com/kivle/msfs2020-go/blob/master/build-simconnect-ws.sh)
 
 ## Why does my virus-scanning software think this program is infected?
 

@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$goArgs = @('go', 'run', './vfrmap', '-listen-http', $ListenHttp, '-listen-https', $ListenHttps)
+$goArgs = @('go', 'run', './simconnect-ws', '-listen-http', $ListenHttp, '-listen-https', $ListenHttps)
 if ($Verbose) { $goArgs += '-verbose' }
 if ($DisableTeleport) { $goArgs += '-disable-teleport' }
 

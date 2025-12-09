@@ -6,15 +6,15 @@ cross-compiles from macos/linux, no other dependencies required. produces a sing
 
 ## status
 
-[msfs2020-go/simconnect](simconnect/) package currently only implements enough of the simconnect api for [examples](examples/) and [vfrmap](vfrmap).
+[msfs2020-go/simconnect](simconnect/) package currently only implements enough of the simconnect api for [examples](examples/) and [simconnect-ws](simconnect-ws).
 
 ## releases and download
 
-program zips releases are uploaded [here](https://github.com/lian/msfs2020-go/releases)
+program zips releases are uploaded [here](https://github.com/kivle/msfs2020-go/releases)
 
 ## tools
 
-* [vfrmap](vfrmap/) local web-server that will allow you to view your location, and some information about your trajectory including airspeed and altitude.
+* [simconnect-ws](simconnect-ws/) local web-server that will allow you to view your location, and some information about your trajectory including airspeed and altitude.
 
 ## examples
 

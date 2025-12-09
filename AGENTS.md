@@ -1,17 +1,17 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Root Go module `github.com/lian/msfs2020-go`; flight-sim bindings live in `simconnect/` (Go bindings + generated `bindata.go` for SimConnect headers).
-- `vfrmap/` is the Windows data server binary; HTTP is a JSON placeholder, and real-time data flows through WebSocket handlers in `vfrmap/websockets/`.
+- Root Go module `github.com/kivle/msfs2020-go`; flight-sim bindings live in `simconnect/` (Go bindings + generated `bindata.go` for SimConnect headers).
+- `simconnect-ws/` is the Windows data server binary; HTTP is a JSON placeholder, and real-time data flows through WebSocket handlers in `simconnect-ws/websockets/`.
 - `examples/request_data/` mirrors the official SimConnect sample; use it as a minimal integration sanity check.
-- Release artifacts (`vfrmap.exe`, `SimConnect.dll`) are kept in the repo for convenience—do not overwrite without intent.
+- Release artifacts (`simconnect-ws.exe`, `SimConnect.dll`) are kept in the repo for convenience—do not overwrite without intent.
 
 ## Build, Run, and Development Commands
 - Standard toolchain: Go 1.14+; ensure `go` is on PATH.
-- Fast compile check: `go build ./...` (verifies both `simconnect` and `vfrmap`).
-- Build Windows binary from any platform: `GOOS=windows GOARCH=amd64 go build github.com/lian/msfs2020-go/vfrmap`.
-- Full release build with embedded assets/version stamps (requires `go-bindata`): `./build-vfrmap.sh`.
-- Local run while developing the map: `go run ./vfrmap` then open `http://localhost:9000`.
+- Fast compile check: `go build ./...` (verifies both `simconnect` and `simconnect-ws`).
+- Build Windows binary from any platform: `GOOS=windows GOARCH=amd64 go build github.com/kivle/msfs2020-go/simconnect-ws`.
+- Full release build with embedded assets/version stamps (requires `go-bindata`): `./build-simconnect-ws.sh`.
+- Local run while developing the map: `go run ./simconnect-ws` then open `http://localhost:9000`.
 
 ## Coding Style & Naming Conventions
 - Format with `gofmt` (or `goimports`) before sending changes; prefer idiomatic Go naming (`Thing`, `thing`, `ThingWithContext`).
@@ -26,7 +26,7 @@
 ## Commit & Pull Request Guidelines
 - Commit messages follow short, imperative summaries (e.g., "Wait for SimConnect before exit"); group related edits together.
 - PRs should describe the change, risks, and simulator setup used for validation; link issues when applicable.
-- Add screenshots or GIFs for UI tweaks under `vfrmap/html/`, and list all commands executed (build/test/manual steps).
+- Add screenshots or GIFs for UI tweaks under `simconnect-ws/html/`, and list all commands executed (build/test/manual steps).
 
 ## Security & Configuration Tips
 - Do not commit personal simulator configs or credentials; only the bundled `SimConnect.dll` and generated assets belong in-tree.

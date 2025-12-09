@@ -1,6 +1,6 @@
 package main
 
-// build: GOOS=windows GOARCH=amd64 go build -o vfrmap.exe github.com/lian/msfs2020-go/vfrmap
+// build: GOOS=windows GOARCH=amd64 go build -o simconnect-ws.exe github.com/kivle/msfs2020-go/simconnect-ws
 
 import (
 	"encoding/json"
@@ -14,8 +14,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/lian/msfs2020-go/simconnect"
-	"github.com/lian/msfs2020-go/vfrmap/websockets"
+	"github.com/kivle/msfs2020-go/simconnect"
+	"github.com/kivle/msfs2020-go/simconnect-ws/websockets"
 )
 
 type Report struct {
@@ -101,9 +101,11 @@ func main() {
 	flag.BoolVar(&disableTeleport, "disable-teleport", false, "disable teleport")
 	flag.Parse()
 
-	fmt.Printf("\nmsfs2020-go/vfrmap\n")
-	fmt.Printf("readme: https://github.com/kivle/msfs2020-go/blob/master/vfrmap/README.md\n")
-	fmt.Printf("issues: https://github.com/kivle/msfs2020-go/issues\n  version: %s (%s)\n\n", buildVersion, buildTime)
+	fmt.Printf("\nsimconnect-ws (github.com/kivle/msfs2020-go)\n")
+	fmt.Printf("readme: https://github.com/kivle/msfs2020-go/blob/master/simconnect-ws/README.md\n")
+	fmt.Printf("issues: https://github.com/kivle/msfs2020-go/issues\n")
+	fmt.Printf("version: %s (%s)\n", buildVersion, buildTime)
+	fmt.Printf("forked from: https://github.com/lian/msfs2020-go/\n\n")
 
 	fmt.Printf("For instructions on how to set up wss:// (TLS), go to http://localhost:9000\n\n")
 
@@ -157,7 +159,7 @@ func main() {
 }
 
 func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
-	s, err := simconnect.New("msfs2020-go/vfrmap")
+	s, err := simconnect.New("simconnect-ws")
 	if err != nil {
 		if !isIgnorableSimConnectError(err) {
 			fmt.Printf("\nFailed to create simconnect connection: %s", err)
@@ -194,7 +196,7 @@ func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 	//s.SubscribeToFacilities(simconnect.FACILITY_LIST_TYPE_WAYPOINT, s.GetDefineID(&simconnect.DataFacilityWaypoint{}))
 
 	startupTextEventID := s.GetEventID()
-	s.ShowText(simconnect.TEXT_TYPE_PRINT_WHITE, 15, startupTextEventID, "msfs2020-go/vfrmap connected")
+	s.ShowText(simconnect.TEXT_TYPE_PRINT_WHITE, 15, startupTextEventID, "simconnect-ws connected")
 
 	simconnectTick := time.NewTicker(100 * time.Millisecond)
 	planePositionTick := time.NewTicker(200 * time.Millisecond)

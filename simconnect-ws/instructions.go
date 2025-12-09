@@ -13,7 +13,7 @@ var certificateTemplate = template.Must(template.New("certPage").Parse(`<!doctyp
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>vfrmap TLS certificate</title>
+  <title>simconnect-ws TLS certificate</title>
   <style>
     body { font-family: "Segoe UI", Tahoma, sans-serif; margin: 0; padding: 24px; background: #0f172a; color: #e2e8f0; }
     header { margin-bottom: 24px; }
@@ -31,7 +31,7 @@ var certificateTemplate = template.Must(template.New("certPage").Parse(`<!doctyp
 <body>
   <header>
     <h1>Secure WebSocket setup (wss://)</h1>
-    <p>vfrmap generates a self-signed TLS certificate automatically. Install the certificate on devices you use to view the map so <code>wss://</code> connections are trusted.</p>
+    <p>simconnect-ws generates a self-signed TLS certificate automatically. Install the certificate on devices you use to view the map so <code>wss://</code> connections are trusted.</p>
     <p>You can reach this page over plain HTTP (<code>{{.HTTPURL}}</code>) to download the certificate if your browser blocks HTTPS initially.</p>
     <div class="downloads">
       <div class="card">
@@ -108,7 +108,7 @@ var certificateTemplate = template.Must(template.New("certPage").Parse(`<!doctyp
     <h2>Linux</h2>
     <ol>
       <li>Download the PEM file.</li>
-      <li>For system-wide trust on most distros: copy to <code>/usr/local/share/ca-certificates/vfrmap.pem</code> and run <code>sudo update-ca-certificates</code>, then restart your browser.</li>
+      <li>For system-wide trust on most distros: copy to <code>/usr/local/share/ca-certificates/simconnect-ws.pem</code> and run <code>sudo update-ca-certificates</code>, then restart your browser.</li>
       <li>If your distro uses <code>update-ca-trust</code>, place it under <code>/etc/pki/ca-trust/source/anchors/</code> and run <code>sudo update-ca-trust extract</code>.</li>
     </ol>
   </section>
@@ -145,11 +145,11 @@ func certificateDownloadHandler(assets *TLSAssets, format string) http.HandlerFu
 		switch format {
 		case "pem":
 			data = assets.CertPEM
-			filename = "vfrmap-cert.pem"
+			filename = "simconnect-ws-cert.pem"
 			contentType = "application/x-pem-file"
 		case "der":
 			data = assets.CertDER
-			filename = "vfrmap-cert.der"
+			filename = "simconnect-ws-cert.der"
 			contentType = "application/pkix-cert"
 		default:
 			http.Error(w, "unknown certificate format", http.StatusNotFound)

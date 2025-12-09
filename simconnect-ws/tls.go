@@ -30,8 +30,8 @@ func ensureTLSAssets(listenAddr string) (*TLSAssets, error) {
 	}
 	exeDir := filepath.Dir(exe)
 
-	certPath := filepath.Join(exeDir, "vfrmap-cert.pem")
-	keyPath := filepath.Join(exeDir, "vfrmap-key.pem")
+	certPath := filepath.Join(exeDir, "simconnect-ws-cert.pem")
+	keyPath := filepath.Join(exeDir, "simconnect-ws-key.pem")
 
 	certPEM, keyPEM, certDER, err := loadExistingCert(certPath, keyPath)
 	if err != nil {
@@ -82,8 +82,8 @@ func generateSelfSigned(certPath, keyPath, listenAddr string) (*TLSAssets, error
 	tmpl := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:   "msfs2020-go/vfrmap",
-			Organization: []string{"msfs2020-go"},
+			CommonName:   "simconnect-ws",
+			Organization: []string{"simconnect-ws"},
 		},
 		NotBefore:             time.Now().Add(-1 * time.Hour),
 		NotAfter:              time.Now().AddDate(5, 0, 0),
