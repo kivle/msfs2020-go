@@ -139,6 +139,28 @@ func sanForListen(listenAddr string) ([]string, []net.IP) {
 		} else {
 			dnsNames = appendIfMissingString(dnsNames, host)
 		}
+	} else {
+		// listen on all interfaces: include all local interface addresses so devices on the LAN trust the cert
+		addrs, err := net.InterfaceAddrs()
+		if err == nil {
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				if ip == nil || ip.IsLoopback() {
+					continue
+				}
+				if ip4 := ip.To4(); ip4 != nil {
+					ipAddrs = appendIfMissingIP(ipAddrs, ip4)
+				} else {
+					ipAddrs = appendIfMissingIP(ipAddrs, ip)
+				}
+			}
+		}
 	}
 
 	ipAddrs = appendIfMissingIP(ipAddrs, net.ParseIP("::1"))
