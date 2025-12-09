@@ -44,6 +44,9 @@ func (s *Websocket) Serve(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	if Debug {
+		log.Printf("upgraded websocket from origin %s\n", r.Header.Get("Origin"))
+	}
 
 	c := &Connection{
 		socket:    s,
@@ -65,16 +68,27 @@ func (h *Websocket) Run() {
 	for {
 		select {
 		case c := <-h.register:
-			fmt.Println("new browser connection")
+			if Debug {
+				log.Printf("new browser connection; total=%d\n", len(h.connections)+1)
+			} else {
+				fmt.Println("new browser connection")
+			}
 			h.connections[c] = true
 			h.NewConnection <- ReceiveMessage{Connection: c}
 		case c := <-h.unregister:
-			fmt.Println("remove browser connection")
+			if Debug {
+				log.Printf("remove browser connection; total=%d\n", len(h.connections)-1)
+			} else {
+				fmt.Println("remove browser connection")
+			}
 			if _, ok := h.connections[c]; ok {
 				delete(h.connections, c)
 				close(c.Send)
 			}
 		case packet := <-h.broadcast:
+			if Debug {
+				log.Printf("broadcast to %d connections, payload %d bytes\n", len(h.connections), len(packet))
+			}
 			for c := range h.connections {
 				c.Send <- packet
 				/*

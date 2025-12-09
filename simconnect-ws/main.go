@@ -102,6 +102,7 @@ func main() {
 	flag.BoolVar(&allowAllOrigins, "allow-all-origins", false, "allow all websocket origins (not recommended)")
 	flag.BoolVar(&disableTeleport, "disable-teleport", false, "disable teleport")
 	flag.Parse()
+	websockets.Debug = verbose
 
 	fmt.Printf("\nsimconnect-ws (github.com/kivle/msfs2020-go)\n")
 	fmt.Printf("readme: https://github.com/kivle/msfs2020-go/blob/master/simconnect-ws/README.md\n")
@@ -216,95 +217,105 @@ func mainLoop(exitSignal chan os.Signal, ws *websockets.Websocket) {
 			//s.RequestFacilitiesList(simconnect.FACILITY_LIST_TYPE_WAYPOINT, waypointRequestID)
 
 		case <-simconnectTick.C:
-			ppData, r1, err := s.GetNextDispatch()
-			if err != nil {
-				fmt.Printf("simconnect dispatch error: %s (retrying)\n", err)
-				return
-			}
-
-			if r1 < 0 {
-				if uint32(r1) == simconnect.E_FAIL {
-					// skip error, means no new messages?
-					continue
-				} else {
-					fmt.Printf("GetNextDispatch error: %d %s (retrying)\n", r1, err)
-					return
+			for {
+				ppData, r1, err := s.GetNextDispatch()
+				if err != nil && verbose {
+					fmt.Printf("simconnect dispatch error: %s\n", err)
 				}
-			}
-
-			recvInfo := *(*simconnect.Recv)(ppData)
-
-			switch recvInfo.ID {
-			case simconnect.RECV_ID_EXCEPTION:
-				recvErr := *(*simconnect.RecvException)(ppData)
-				fmt.Printf("SIMCONNECT_RECV_ID_EXCEPTION %#v\n", recvErr)
-
-			case simconnect.RECV_ID_OPEN:
-				recvOpen := *(*simconnect.RecvOpen)(ppData)
-				fmt.Printf(
-					"\nflight simulator info:\n  codename: %s\n  version: %d.%d (%d.%d)\n  simconnect: %d.%d (%d.%d)\n\n",
-					recvOpen.ApplicationName,
-					recvOpen.ApplicationVersionMajor,
-					recvOpen.ApplicationVersionMinor,
-					recvOpen.ApplicationBuildMajor,
-					recvOpen.ApplicationBuildMinor,
-					recvOpen.SimConnectVersionMajor,
-					recvOpen.SimConnectVersionMinor,
-					recvOpen.SimConnectBuildMajor,
-					recvOpen.SimConnectBuildMinor,
-				)
-
-			case simconnect.RECV_ID_EVENT:
-				recvEvent := *(*simconnect.RecvEvent)(ppData)
-
-				switch recvEvent.EventID {
-				case eventSimStartID:
-					fmt.Println("EVENT: SimStart")
-				case startupTextEventID:
-					// ignore
-				default:
-					fmt.Println("unknown SIMCONNECT_RECV_ID_EVENT", recvEvent.EventID)
-				}
-			case simconnect.RECV_ID_WAYPOINT_LIST:
-				waypointList := *(*simconnect.RecvFacilityWaypointList)(ppData)
-				fmt.Printf("SIMCONNECT_RECV_ID_WAYPOINT_LIST %#v\n", waypointList)
-
-			case simconnect.RECV_ID_AIRPORT_LIST:
-				airportList := *(*simconnect.RecvFacilityAirportList)(ppData)
-				fmt.Printf("SIMCONNECT_RECV_ID_AIRPORT_LIST %#v\n", airportList)
-
-			case simconnect.RECV_ID_SIMOBJECT_DATA_BYTYPE:
-				recvData := *(*simconnect.RecvSimobjectDataByType)(ppData)
-
-				switch recvData.RequestID {
-				case s.DefineMap["Report"]:
-					report = (*Report)(ppData)
-
+				if r1 < 0 {
+					if uint32(r1) == simconnect.E_FAIL {
+						break
+					}
 					if verbose {
-						fmt.Printf("REPORT: %#v\n", report)
+						fmt.Printf("GetNextDispatch error: %d %s\n", r1, err)
+					}
+					break
+				}
+				if ppData == nil {
+					if verbose {
+						fmt.Println("simconnect dispatch returned nil data, continuing")
+					}
+					break
+				}
+
+				recvInfo := *(*simconnect.Recv)(ppData)
+
+				switch recvInfo.ID {
+				case simconnect.RECV_ID_EXCEPTION:
+					recvErr := *(*simconnect.RecvException)(ppData)
+					fmt.Printf("SIMCONNECT_RECV_ID_EXCEPTION %#v\n", recvErr)
+
+				case simconnect.RECV_ID_OPEN:
+					recvOpen := *(*simconnect.RecvOpen)(ppData)
+					fmt.Printf(
+						"\nflight simulator info:\n  codename: %s\n  version: %d.%d (%d.%d)\n  simconnect: %d.%d (%d.%d)\n\n",
+						recvOpen.ApplicationName,
+						recvOpen.ApplicationVersionMajor,
+						recvOpen.ApplicationVersionMinor,
+						recvOpen.ApplicationBuildMajor,
+						recvOpen.ApplicationBuildMinor,
+						recvOpen.SimConnectVersionMajor,
+						recvOpen.SimConnectVersionMinor,
+						recvOpen.SimConnectBuildMajor,
+						recvOpen.SimConnectBuildMinor,
+					)
+
+				case simconnect.RECV_ID_EVENT:
+					recvEvent := *(*simconnect.RecvEvent)(ppData)
+
+					switch recvEvent.EventID {
+					case eventSimStartID:
+						fmt.Println("EVENT: SimStart")
+					case startupTextEventID:
+						// ignore
+					default:
+						fmt.Println("unknown SIMCONNECT_RECV_ID_EVENT", recvEvent.EventID)
+					}
+				case simconnect.RECV_ID_WAYPOINT_LIST:
+					waypointList := *(*simconnect.RecvFacilityWaypointList)(ppData)
+					fmt.Printf("SIMCONNECT_RECV_ID_WAYPOINT_LIST %#v\n", waypointList)
+
+				case simconnect.RECV_ID_AIRPORT_LIST:
+					airportList := *(*simconnect.RecvFacilityAirportList)(ppData)
+					fmt.Printf("SIMCONNECT_RECV_ID_AIRPORT_LIST %#v\n", airportList)
+
+				case simconnect.RECV_ID_SIMOBJECT_DATA_BYTYPE:
+					recvData := *(*simconnect.RecvSimobjectDataByType)(ppData)
+
+					switch recvData.RequestID {
+					case s.DefineMap["Report"]:
+						report = (*Report)(ppData)
+
+						payload := map[string]interface{}{
+							"type":           "plane",
+							"latitude":       report.Latitude,
+							"longitude":      report.Longitude,
+							"altitude":       fmt.Sprintf("%.0f", report.Altitude),
+							"heading":        int(report.Heading),
+							"airspeed":       fmt.Sprintf("%.0f", report.Airspeed),
+							"airspeed_true":  fmt.Sprintf("%.0f", report.AirspeedTrue),
+							"vertical_speed": fmt.Sprintf("%.0f", report.VerticalSpeed),
+							"flaps":          fmt.Sprintf("%.0f", report.Flaps),
+							"trim":           fmt.Sprintf("%.1f", report.Trim),
+							"rudder_trim":    fmt.Sprintf("%.1f", report.RudderTrim),
+						}
+						if verbose {
+							fmt.Printf("REPORT: %#v\n", report)
+							fmt.Printf("broadcast plane: %+v\n", payload)
+						}
+
+						ws.Broadcast(payload)
+
+					case s.DefineMap["TrafficReport"]:
+						trafficReport = (*TrafficReport)(ppData)
+						fmt.Printf("TRAFFIC REPORT: %s\n", trafficReport.Inspect())
 					}
 
-					ws.Broadcast(map[string]interface{}{
-						"type":           "plane",
-						"latitude":       report.Latitude,
-						"longitude":      report.Longitude,
-						"altitude":       fmt.Sprintf("%.0f", report.Altitude),
-						"heading":        int(report.Heading),
-						"airspeed":       fmt.Sprintf("%.0f", report.Airspeed),
-						"airspeed_true":  fmt.Sprintf("%.0f", report.AirspeedTrue),
-						"vertical_speed": fmt.Sprintf("%.0f", report.VerticalSpeed),
-						"flaps":          fmt.Sprintf("%.0f", report.Flaps),
-						"trim":           fmt.Sprintf("%.1f", report.Trim),
-						"rudder_trim":    fmt.Sprintf("%.1f", report.RudderTrim),
-					})
-
-				case s.DefineMap["TrafficReport"]:
-					trafficReport = (*TrafficReport)(ppData)
-					fmt.Printf("TRAFFIC REPORT: %s\n", trafficReport.Inspect())
+				default:
+					if verbose {
+						fmt.Println("recvInfo.ID unknown", recvInfo.ID)
+					}
 				}
-
-			default:
-				fmt.Println("recvInfo.ID unknown", recvInfo.ID)
 			}
 
 		case <-exitSignal:
@@ -366,6 +377,11 @@ func isIgnorableSimConnectError(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "SimConnect_Open error: -2147467259") &&
-		strings.Contains(msg, "The operation completed successfully")
+	if strings.Contains(msg, "The operation completed successfully") {
+		return true
+	}
+	if strings.Contains(msg, "SimConnect_Open error: -2147467259") {
+		return true
+	}
+	return false
 }

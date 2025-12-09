@@ -32,6 +32,11 @@ var (
 )
 
 func NewUpgrader(allowAllOrigins bool) websocket.Upgrader {
+	allowedOrigins := map[string]bool{
+		"https://kivle.github.io":           true,
+		"https://kivle.github.io/msfs-map":  true,
+		"https://github.com/kivle/msfs-map": true,
+	}
 	return websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -43,10 +48,11 @@ func NewUpgrader(allowAllOrigins bool) websocket.Upgrader {
 			if origin == "" {
 				return false
 			}
-			if isAllowedLocalOrigin(origin) {
+			originLower := strings.ToLower(origin)
+			if isAllowedLocalOrigin(originLower) {
 				return true
 			}
-			if strings.EqualFold(origin, "https://github.com/kivle/msfs-map") {
+			if allowedOrigins[originLower] {
 				return true
 			}
 			return false
