@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -127,6 +128,9 @@ func generateSelfSigned(certPath, keyPath, listenAddr string) (*TLSAssets, error
 
 func sanForListen(listenAddr string) ([]string, []net.IP) {
 	dnsNames := []string{"localhost"}
+	for _, name := range mdnsNames() {
+		dnsNames = appendIfMissingString(dnsNames, name)
+	}
 	ipAddrs := []net.IP{net.ParseIP("127.0.0.1")}
 
 	host, _, err := net.SplitHostPort(listenAddr)
@@ -188,6 +192,35 @@ func appendIfMissingString(list []string, value string) []string {
 		}
 	}
 	return append(list, value)
+}
+
+func mdnsNames() []string {
+	host, err := os.Hostname()
+	if err != nil || host == "" {
+		return nil
+	}
+	host = strings.TrimSpace(strings.ToLower(host))
+	names := []string{}
+	if host != "" {
+		names = appendIfMissingString(names, host)
+		if !strings.Contains(host, ".") {
+			names = appendIfMissingString(names, host+".local")
+		}
+	}
+	return names
+}
+
+func bestMDNSName() string {
+	for _, name := range mdnsNames() {
+		if strings.HasSuffix(name, ".local") {
+			return name
+		}
+	}
+	names := mdnsNames()
+	if len(names) > 0 {
+		return names[0]
+	}
+	return ""
 }
 
 func parseDER(certPEM []byte) []byte {

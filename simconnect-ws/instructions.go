@@ -50,6 +50,13 @@ var certificateTemplate = template.Must(template.New("certPage").Parse(`<!doctyp
         <strong>Fallback WebSocket (no TLS)</strong><br>
         <code>{{.WSURL}}</code>
       </div>
+      {{if .MDNSWSS}}
+      <div class="card">
+        <strong>mDNS (Bonjour) name</strong><br>
+        <code>{{.MDNSWSS}}</code><br>
+        <small style="color:#94a3b8;">Try this on LAN devices that resolve {{.MDNSHost}} (usually macOS/iOS/Linux, or Windows with Bonjour).</small>
+      </div>
+      {{end}}
     </div>
 
     <div class="card" style="margin-top:12px; max-width: 960px;">
@@ -184,6 +191,14 @@ func certificateInfoHandler(assets *TLSAssets, httpListen, httpsListen string) h
 		wsList := makeURLs("ws", httpHostPorts, "/ws")
 		wssList := makeURLs("wss", httpsHostPorts, "/ws")
 
+		mdnsHost := bestMDNSName()
+		mdnsWS := ""
+		mdnsWSS := ""
+		if mdnsHost != "" {
+			mdnsWS = (&url.URL{Scheme: "ws", Host: hostWithPort(mdnsHost, httpPort), Path: "/ws"}).String()
+			mdnsWSS = (&url.URL{Scheme: "wss", Host: hostWithPort(mdnsHost, httpsPort), Path: "/ws"}).String()
+		}
+
 		data := struct {
 			PEMLink  string
 			DERLink  string
@@ -194,6 +209,9 @@ func certificateInfoHandler(assets *TLSAssets, httpListen, httpsListen string) h
 			HTTPPort string
 			WSList   []string
 			WSSList  []string
+			MDNSHost string
+			MDNSWS   string
+			MDNSWSS  string
 		}{
 			PEMLink:  "/cert.pem",
 			DERLink:  "/cert.der",
@@ -204,6 +222,9 @@ func certificateInfoHandler(assets *TLSAssets, httpListen, httpsListen string) h
 			HTTPPort: httpPort,
 			WSList:   wsList,
 			WSSList:  wssList,
+			MDNSHost: mdnsHost,
+			MDNSWS:   mdnsWS,
+			MDNSWSS:  mdnsWSS,
 		}
 
 		_ = certificateTemplate.Execute(w, data)
@@ -298,6 +319,10 @@ func collectHostPorts(listenAddr, requestHost string) []string {
 			}
 		}
 		hosts = append(hosts, hostWithPort("127.0.0.1", port))
+	}
+
+	for _, name := range mdnsNames() {
+		hosts = append(hosts, hostWithPort(name, port))
 	}
 
 	return dedupe(hosts)
